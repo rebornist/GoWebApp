@@ -23,7 +23,7 @@ func (r *router) HandleFunc(method, pattern string, h http.HandlerFunc) {
 	if !ok {
 		// 등록된 맵이 없으면 새 맵을 생성
 		m = make(map[string]http.HandlerFunc)
-		r.handlers[method]
+		r.handlers[method] = m
 	}
 
 	// http 메서드로 등록된 맵에 URL 패턴과 핸들러 함수 등록
@@ -31,7 +31,7 @@ func (r *router) HandleFunc(method, pattern string, h http.HandlerFunc) {
 }
 
 // 라우터에 등록된 동적 URL 패턴과 실제 URL 경로가 일치하는지 확인하는 함수
-func match(pattren, path string) (bool, map[string]string) {
+func match(pattern, path string) (bool, map[string]string) {
 	// 패턴과 패스가 정확히 일치하면 바로 true를 반환
 	if pattern == path {
 		return true, nil
@@ -50,11 +50,11 @@ func match(pattren, path string) (bool, map[string]string) {
 	params := make(map[string]string)
 
 	// "/"로 구분된 패턴/패스의 각 문자열을 하나씩 비교
-	for i := 0; len(patterns); i++ {
+	for i := 0; i < len(patterns); i++ {
 		switch {
 		case patterns[i] == paths[i]:
 			// 패턴과 패스의 부분 문자열이 일치하면 바로 다음 루프 수행
-		case len(patterns[i]) > 0 && patterns[i][0] == ":":
+		case len(patterns[i]) > 0 && patterns[i][0] == ':':
 			// 패턴이 ":" 문자열로 시작하면 params에 URL params를 담은 후 다음 루프 수행
 			params[patterns[i][1:]] = paths[i]
 		default:
@@ -65,6 +65,11 @@ func match(pattren, path string) (bool, map[string]string) {
 
 	// true와 params를 반환
 	return true, params
+}
+
+// 라우터에 http.Handler 인터페이스의 ServeHTTP 메서드 정의
+type Handler interface {
+	ServeHTTP(http.ResponseWriter, *http.Request)
 }
 
 // 웹 요청의 http 메서드와 URL 경로를 분석해서 그에 맞는 핸들러를 찾아 동작시키는 ServHTTP 메서드
@@ -78,6 +83,6 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	// 요청 URL에 해당하는 handler를 찾지 못하면 NotFound 에러 처리
-	http.NotFound(w, reg)
+	http.NotFound(w, req)
 	return
 }
